@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getItems, getFontSize, getMinQuantity, getTheme } from '../lib/storage';
 import AllItems from './AllItems';
 import CreateScreen from './CreateScreen';
+import SalesScreen from './SalesScreen';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -77,22 +78,21 @@ const HomeScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#002b36' : '#fdf6e3' }]}>
       <View style={styles.header}>
-  <View>
-    <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>
-      KiranaKart
-    </Text>
-    {user?.name && (
-      <Text style={[styles.subtitle, { color: isDark ? '#aaa' : '#555' }]}>
-        Welcome back, {user.name?.split(' ')[0]} !
-      </Text>
-    )}
-  </View>
+        <View>
+          <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>
+            KiranaKart
+          </Text>
+          {user?.name && (
+            <Text style={[styles.subtitle, { color: isDark ? '#aaa' : '#555' }]}>
+              Welcome back, {user.name?.split(' ')[0]}!
+            </Text>
+          )}
+        </View>
 
-  <Pressable onPress={() => navigation.navigate('Account')} style={styles.avatar}>
-    <Text style={styles.avatarLetter}>{avatarLetter}</Text>
-  </Pressable>
-</View>
-
+        <Pressable onPress={() => navigation.navigate('Account')} style={styles.avatar}>
+          <Text style={styles.avatarLetter}>{avatarLetter}</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.btnContainer}>
         <Pressable style={[styles.btn, view === 0 && styles.activeBtn]} onPress={() => setView(0)}>
@@ -114,25 +114,19 @@ const HomeScreen = () => {
               view === 1 && styles.activeText,
             ]}
           >
-            Low Stock
+            Create
           </Text>
         </Pressable>
         <Pressable style={[styles.btn, view === 2 && styles.activeBtn]} onPress={() => setView(2)}>
-          <Text
-            style={[
-              styles.btnText,
-              { fontSize: fontSizePresets.button[fontSize] },
-              view === 2 && styles.activeText,
-            ]}
-          >
-            Create
+          <Text style={[styles.btnText, { fontSize: fontSizePresets.button[fontSize] }, view === 2 && styles.activeText]}>
+            Sales
           </Text>
         </Pressable>
       </View>
 
       {view === 0 && <AllItems data={data} minQty={minQty} />}
-      {view === 1 && <AllItems data={data.filter(item => item.stock < minQty)} minQty={minQty} />}
-      {view === 2 && <CreateScreen data={data} setdata={setData} />}
+      {view === 1 && <CreateScreen data={data} setdata={setData} />}
+      {view === 2 && <SalesScreen />}
     </View>
   );
 };
@@ -160,15 +154,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   subtitle: {
-  fontSize: 13,
-  marginTop: 1,
-},
-
+    fontSize: 13,
+    marginTop: 1,
+  },
   avatar: {
     backgroundColor: 'green',
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },

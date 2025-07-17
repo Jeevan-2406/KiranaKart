@@ -1,6 +1,7 @@
 // src/lib/storage.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import uuid from 'react-native-uuid';
+import { clearAllBills } from './bills';
 
 const USER_KEY = 'KiranaKart_User';
 const SETTINGS_THEME = 'KiranaKart_Theme';
@@ -51,6 +52,7 @@ export const deleteUserFromStorage = async () => {
       SETTINGS_MIN_QTY,
       ITEMS_KEY
     ]);
+    await clearAllBills();
   } catch (error) {
     console.error('Error deleting user and app data:', error);
   }

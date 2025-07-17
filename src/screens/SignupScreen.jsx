@@ -1,18 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  useColorScheme,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-  TouchableWithoutFeedback,
-  Animated,
-} from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, useColorScheme, Image, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, Animated, } from 'react-native';
 import { saveUserToStorage } from '../lib/storage';
 
 const SignupScreen = ({ navigation }) => {
@@ -60,29 +47,30 @@ const SignupScreen = ({ navigation }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (form.name.trim().length < 2) {
-      newErrors.name = '* Enter a valid name';
+    if (!/^[A-Za-z ]{3,30}$/.test(form.name.trim())) {
+      newErrors.name = '* Name should be alphabetic (3–30 letters only)';
       triggerShake('name');
     }
 
-    if (form.shop.trim().length < 2) {
-      newErrors.shop = '* Enter a valid shop name';
+    if (!/^[A-Za-z ]{3,30}$/.test(form.shop.trim())) {
+      newErrors.shop = '* Shop name should be alphabetic (3–30 letters only)';
       triggerShake('shop');
     }
 
-    if (form.address.trim().length < 5) {
-      newErrors.address = '* Enter a proper address';
+    if (!/^[A-Za-z0-9 ,.-]{5,100}$/.test(form.address.trim())) {
+      newErrors.address = '* Enter a valid address (min 5 characters)';
       triggerShake('address');
     }
 
-    if (!/^\d{10}$/.test(form.phone.trim())) {
-      newErrors.phone = '* Phone must be 10 digits';
+    if (!/^[6-9]\d{9}$/.test(form.phone.trim())) {
+      newErrors.phone = '* Enter a valid Indian phone number';
       triggerShake('phone');
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
 
   const handleSignup = async () => {
     if (!validateForm()) return;
@@ -158,7 +146,7 @@ const SignupScreen = ({ navigation }) => {
           {themedInput('phone', 'Phone Number', 'numeric')}
 
           <Pressable style={styles.button} onPress={handleSignup}>
-            <Text style={styles.buttonText}>Sign Up</Text>
+            <Text style={styles.buttonText}>Create Account</Text>
           </Pressable>
         </View>
       </TouchableWithoutFeedback>

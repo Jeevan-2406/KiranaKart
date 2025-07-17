@@ -8,10 +8,10 @@ import DropDownPicker from 'react-native-dropdown-picker';
 const CreateScreen = ({ data, setdata }) => {
     const fontSizePresets = {
         title: [16, 18, 20],
-        input: [10, 12, 14],
-        button: [10, 12, 14],
+        input: [8, 9, 10],
+        button: [9, 10, 11],
         heading: [12, 14, 16],
-        item: [10, 12, 14],
+        item: [9, 10, 11],
         error: [5, 6, 7],
     };
 
@@ -33,13 +33,23 @@ const CreateScreen = ({ data, setdata }) => {
     const [minQty, setMinQty] = useState(1);
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [filteredUnits, setFilteredUnits] = useState([]);
+    const validUnits = [
+        'kg', 'g', 'mg', 'quintal', 'ton',
+        'litre', 'ltr', 'ml',
+        'piece', 'pc', 'dozen', 'packet', 'pack', 'box',
+        'bottle', 'tin', 'bag', 'roll', 'strip', 'bar',
+        'carton', 'can', 'jar', 'sachet', 'tray', 'bundle',
+        'pouch', 'tube', 'set', 'loaf', 'bun', 'tetra pack', 'spray', 'refill',
+    ];
+    const [showUnitSuggestions, setShowUnitSuggestions] = useState(false);
 
 
     // Dropdown state
     const [open, setOpen] = useState(false);
     const [categoryValue, setCategoryValue] = useState('Grains');
     const [categories, setCategories] = useState([
-        { label: 'Grains & Flours', value: 'Grains' },
+        { label: 'Grains & Flours', value: 'Grains & Flours' },
         { label: 'Dairy', value: 'Dairy' },
         { label: 'Snacks', value: 'Snacks' },
         { label: 'Spices', value: 'Spices' },
@@ -108,6 +118,17 @@ const CreateScreen = ({ data, setdata }) => {
             newErrors.name = '* Item name must be at least 2 characters long';
             triggerShake('name');
         }
+        const duplicate = data.find(
+            item =>
+                item.name.trim().toLowerCase() === Name.trim().toLowerCase() &&
+                item.unit.trim().toLowerCase() === Unit.trim().toLowerCase() &&
+                (!isEdit || item.id !== editItemId) // allow same name during edit
+        );
+
+        if (duplicate) {
+            newErrors.name = '* Item with same name and unit already exists';
+            triggerShake('name');
+        }
 
         if (!Quantity) {
             newErrors.quantity = '* Quantity is required';
@@ -126,7 +147,21 @@ const CreateScreen = ({ data, setdata }) => {
         if (!Unit || Unit.trim().length === 0) {
             newErrors.unit = '* Unit is required';
             triggerShake('unit');
+        } else if (!validUnits.includes(Unit.trim().toLowerCase())) {
+            newErrors.unit = '* Unit not found. Please try something else.';
+            triggerShake('unit');
         }
+
+        if (Price && Price.trim().length > 0) {
+            if (isNaN(Price)) {
+                newErrors.price = '* Price must be a number';
+                triggerShake('price');
+            } else if (Number(Price) < 0) {
+                newErrors.price = '* Price must be positive';
+                triggerShake('price');
+            }
+        }
+
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -289,10 +324,34 @@ const CreateScreen = ({ data, setdata }) => {
                                 onFocus={() => {
                                     setFocused({ name: false, quantity: false, unit: true, price: false });
                                     setErrors({});
+                                    setShowUnitSuggestions(true);
                                     if (open) setOpen(false);
+                                    // Show all valid units when focused
+                                    if (!Unit) {
+                                        setFilteredUnits(validUnits);
+                                    } else {
+                                        // Filter based on current input
+                                        const filtered = validUnits.filter(unit =>
+                                            unit.toLowerCase().includes(Unit.toLowerCase())
+                                        );
+                                        setFilteredUnits(filtered);
+                                    }
                                 }}
-                                onBlur={() => setFocused({ ...focused, unit: false })}
-                                onChangeText={setUnit}
+                                onBlur={() => {
+                                    setFocused({ ...focused, unit: false });
+                                    setTimeout(() => setShowUnitSuggestions(false), 200);
+                                }}
+                                onChangeText={(text) => {
+                                    setUnit(text);
+                                    if (text.trim().length === 0) {
+                                        setFilteredUnits(validUnits);
+                                    } else {
+                                        const filtered = validUnits.filter(unit =>
+                                            unit.toLowerCase().includes(text.toLowerCase())
+                                        );
+                                        setFilteredUnits(filtered);
+                                    }
+                                }}
                                 style={[
                                     styles.input,
                                     {
@@ -304,6 +363,27 @@ const CreateScreen = ({ data, setdata }) => {
                             />
                         </Animated.View>
                         {errors.unit && <Text style={styles.errorText}>{errors.unit}</Text>}
+                        {filteredUnits.length > 0 && (
+                            <View style={{
+                                backgroundColor: isDarkMode ? '#073642' : '#eee',
+                                borderRadius: 6,
+                                marginTop: -5,
+                                padding: 8
+                            }}>
+                                {filteredUnits.map((item, index) => (
+                                    <Pressable key={index} onPress={() => {
+                                        setUnit(item);
+                                        setShowUnitSuggestions(false);
+                                        setFilteredUnits([]); // hide suggestions
+                                    }}>
+                                        <Text style={{
+                                            color: isDarkMode ? 'white' : 'black',
+                                            paddingVertical: 4
+                                        }}>{item}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
 
                         <Animated.View style={{ transform: [{ translateX: shakeAnim.quantity }] }}>
                             <TextInput
@@ -316,12 +396,18 @@ const CreateScreen = ({ data, setdata }) => {
                                     if (open) setOpen(false);
                                 }}
                                 onBlur={() => setFocused({ ...focused, price: false })}
-                                onChangeText={setPrice}
+                                onChangeText={(text) => {
+                                    if (text === '-' || text === '.') {
+                                        setPrice('');
+                                    } else if (!isNaN(text) || text === '') {
+                                        setPrice(text);
+                                    }
+                                }}
                                 style={[
                                     styles.input,
                                     {
                                         color: isDarkMode ? 'white' : 'black',
-                                        borderColor: getBorderColor('quantity'),
+                                        borderColor: getBorderColor('price'),
                                         fontSize: fontSizePresets.input[fontSize]
                                     }
                                 ]}
@@ -428,7 +514,7 @@ const CreateScreen = ({ data, setdata }) => {
                                                 color: 'black'
                                             }
                                         ]}>
-                                            {item.name}
+                                            {item.name.length > 20 ? item.name.slice(0, 20) + '…' : item.name}
                                         </Text>
                                         <Text style={[
                                             styles.itemSubText,
@@ -453,7 +539,7 @@ const CreateScreen = ({ data, setdata }) => {
                                             <Text style={[
                                                 styles.itemActionText,
                                                 {
-                                                    color: 'green'
+                                                    color: 'green', fontSize: fontSizePresets.input[fontSize] + 3,
                                                 }
                                             ]}>
                                                 Edit
@@ -463,7 +549,7 @@ const CreateScreen = ({ data, setdata }) => {
                                             <Text style={[
                                                 styles.itemActionText,
                                                 {
-                                                    color: 'red'
+                                                    color: 'red', fontSize: fontSizePresets.input[fontSize] + 3,
                                                 }
                                             ]}>
                                                 Delete
@@ -556,7 +642,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.2,
         borderRadius: 7,
         paddingHorizontal: 15,
-        paddingVertical: 10,
+        paddingVertical: 5,
     },
     button: {
         paddingVertical: 12,
@@ -588,7 +674,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     itemSubText: {
-        fontSize: 10,
+        fontSize: 8,
         marginTop: 2,
     },
     itemActionText: {

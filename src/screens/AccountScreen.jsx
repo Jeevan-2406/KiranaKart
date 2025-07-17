@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, useColorScheme, Pressable, TextInput, Modal, Sc
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getMinQuantity, saveMinQuantity, getFontSize, saveFontSize, getTheme, saveTheme, editUserInStorage } from '../lib/storage';
+import { getMinQuantity, saveMinQuantity, getFontSize, saveFontSize, getTheme, saveTheme, editUserInStorage, deleteUserFromStorage } from '../lib/storage';
 
 const AccountScreen = () => {
     const [themeMode, setThemeMode] = useState(0);
@@ -25,7 +25,8 @@ const AccountScreen = () => {
     const [editedAddress, setEditedAddress] = useState('');
     const [editedPhone, setEditedPhone] = useState('');
     const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
-
+    const [editErrors, setEditErrors] = useState({});
+    const [focusedField, setFocusedField] = useState('');
 
     const fontSizePresets = {
         name: [14, 16, 18],
@@ -76,8 +77,31 @@ const AccountScreen = () => {
         await saveMinQuantity(intValue);
     };
 
+    const validateEditForm = () => {
+        const errors = {};
+
+        if (!/^[A-Za-z ]{3,30}$/.test(editedName.trim())) {
+            errors.name = 'Name must be 3–30 letters only.';
+        }
+
+        if (!/^[A-Za-z ]{3,30}$/.test(editedShop.trim())) {
+            errors.shop = 'Shop name must be 3–30 letters only.';
+        }
+
+        if (!/^[A-Za-z0-9 ,.-]{5,100}$/.test(editedAddress.trim())) {
+            errors.address = 'Enter a valid address (min 5 characters).';
+        }
+
+        if (!/^[6-9]\d{9}$/.test(editedPhone.trim())) {
+            errors.phone = 'Enter a valid 10-digit Indian phone number.';
+        }
+
+        setEditErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleLogout = async () => {
-        await AsyncStorage.removeItem('KiranaKart_User');
+        await deleteUserFromStorage();
         navigation.replace('Signup');
     };
 
@@ -138,7 +162,7 @@ const AccountScreen = () => {
                         Minimum Quantity
                     </Text>
                     <TextInput
-                        style={[styles.input, { backgroundColor: isDark ? '#073642' : '#eee', color: isDark ? '#fff' : '#000', fontSize: fontSizePresets.input[fontSize] }]}
+                        style={[styles.input, { backgroundColor: isDark ? '#073642' : '#eee', color: isDark ? '#fff' : '#000', fontSize: fontSizePresets.input[fontSize], paddingVertical:7 }]}
                         keyboardType="number-pad"
                         value={minQty.toString()}
                         onChangeText={handleQtyChange}
@@ -171,11 +195,11 @@ const AccountScreen = () => {
             <Modal animationType="slide" transparent={true} visible={isFontSizeModalVisible} onRequestClose={() => setFontSizeModalVisible(false)}>
                 <Pressable style={styles.modalOverlay} onPress={() => setFontSizeModalVisible(false)}>
                     <Pressable style={[styles.modalContent, { backgroundColor: isDark ? '#073642' : '#fff' }]} onPress={(e) => e.stopPropagation()}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: isDark ? '#fff' : '#000', marginBottom: 20 }}>Select Font Size</Text>
+                        <Text style={{ fontSize: 15, fontWeight: 'bold', color: isDark ? '#fff' : '#000', marginBottom: 20 }}>Select Font Size</Text>
                         <View style={[styles.separator, { backgroundColor: isDark ? '#777' : '#aaa' }]} />
                         {['Small', 'Medium', 'Large'].map((label, index) => (
                             <Pressable key={index} onPress={() => handleSelectFontSize(index)} style={styles.modalOption}>
-                                <Text style={{ fontSize: 18, color: isDark ? '#fff' : '#000' }}>{label}</Text>
+                                <Text style={{ fontSize: 12, color: isDark ? '#fff' : '#000' }}>{label}</Text>
                             </Pressable>
                         ))}
                     </Pressable>
@@ -186,11 +210,11 @@ const AccountScreen = () => {
             <Modal animationType="slide" transparent={true} visible={isThemeModalVisible} onRequestClose={() => setThemeModalVisible(false)}>
                 <Pressable style={styles.modalOverlay} onPress={() => setThemeModalVisible(false)}>
                     <Pressable style={[styles.modalContent, { backgroundColor: isDark ? '#073642' : '#fff' }]} onPress={(e) => e.stopPropagation()}>
-                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: isDark ? '#fff' : '#000', marginBottom: 20 }}>Select Theme</Text>
+                        <Text style={{ fontSize: 15, fontWeight: 'bold', color: isDark ? '#fff' : '#000', marginBottom: 20 }}>Select Theme</Text>
                         <View style={[styles.separator, { backgroundColor: isDark ? '#777' : '#aaa' }]} />
                         {['System', 'Light', 'Dark'].map((label, index) => (
                             <Pressable key={index} onPress={() => handleSelectTheme(index)} style={styles.modalOption}>
-                                <Text style={{ fontSize: 18, color: isDark ? '#fff' : '#000' }}>{label}</Text>
+                                <Text style={{ fontSize: 12, color: isDark ? '#fff' : '#000' }}>{label}</Text>
                             </Pressable>
                         ))}
                     </Pressable>
@@ -212,22 +236,49 @@ const AccountScreen = () => {
                             Edit Profile
                         </Text>
 
-                        {[['Name', editedName, setEditedName], ['Shop Name', editedShop, setEditedShop], ['Address', editedAddress, setEditedAddress], ['Phone Number', editedPhone, setEditedPhone]].map(([label, value, setter], index) => (
-                            <TextInput
-                                key={index}
-                                placeholder={label}
-                                placeholderTextColor={isDark ? '#aaa' : '#666'}
-                                style={[styles.input, {
-                                    backgroundColor: isDark ? '#002b36' : '#f0f0f0',
-                                    color: isDark ? '#fff' : '#000',
-                                    marginBottom: 10,
-                                    width: '100%',
-                                    fontSize: 14,
-                                }]}
-                                value={value}
-                                onChangeText={setter}
-                            />
+                        {[
+                            ['name', 'Name', editedName, setEditedName],
+                            ['shop', 'Shop Name', editedShop, setEditedShop],
+                            ['address', 'Address', editedAddress, setEditedAddress],
+                            ['phone', 'Phone Number', editedPhone, setEditedPhone],
+                        ].map(([key, label, value, setter], index) => (
+                            <View key={index} style={{ width: '100%', marginBottom: 10 }}>
+                                <TextInput
+                                    placeholder={label}
+                                    placeholderTextColor={isDark ? '#aaa' : '#666'}
+                                    style={[
+                                        styles.input,
+                                        {
+                                            backgroundColor: isDark ? '#002b36' : '#f0f0f0',
+                                            color: isDark ? '#fff' : '#000',
+                                            borderWidth: 1.5,
+                                            borderColor:
+                                                focusedField === key
+                                                    ? 'green'
+                                                    : editErrors[key]
+                                                        ? 'red'
+                                                        : 'gray',
+                                        },
+                                    ]}
+                                    value={value}
+                                    onFocus={() => {
+                                        setFocusedField(key);
+                                        setEditErrors({});
+                                    }}
+
+                                    onBlur={() => setFocusedField('')}
+                                    onChangeText={(text) => {
+                                        setter(text);
+                                        setEditErrors(prev => ({ ...prev, [key]: undefined }));
+                                    }}
+                                />
+
+                                {editErrors[key] && (
+                                    <Text style={{ color: 'red', fontSize: 12, marginTop: 2 }}>{editErrors[key]}</Text>
+                                )}
+                            </View>
                         ))}
+
 
                         <Pressable
                             style={{
@@ -238,15 +289,23 @@ const AccountScreen = () => {
                                 marginTop: 10,
                             }}
                             onPress={async () => {
-                                const updated = await editUserInStorage({
-                                    name: editedName,
-                                    shop: editedShop,
-                                    address: editedAddress,
-                                    phone: editedPhone
-                                });
-                                setUser(updated);
-                                setEditModalVisible(false);
+                                const isValid = validateEditForm();
+                                if (!isValid) return;
+
+                                try {
+                                    const updated = await editUserInStorage({
+                                        name: editedName.trim(),
+                                        shop: editedShop.trim(),
+                                        address: editedAddress.trim(),
+                                        phone: editedPhone.trim()
+                                    });
+                                    setUser(updated);
+                                    setEditModalVisible(false);
+                                } catch (error) {
+                                    console.error("Update failed:", error);
+                                }
                             }}
+
                         >
                             <Text style={{ color: '#fff', fontWeight: 'bold' }}>Update</Text>
                         </Pressable>
